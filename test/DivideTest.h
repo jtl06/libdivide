@@ -231,6 +231,8 @@ class DivideTest {
 
         for (size_t i = 0; i < count; i++) {
             T numer = numers[i];
+            // INT_MIN / -1 is undefined behavior in the scalar reference.
+            if (limits::is_signed && numer == (limits::min)() && denom == T(-1)) continue;
             T expect = numer / denom;
             if (result[i] != expect) {
                 PRINT_ERROR(F("SVE vector failure for: "));
@@ -376,6 +378,18 @@ class DivideTest {
 #ifdef LIBDIVIDE_SVE
         const size_t sve_count = SveVecFuncs<T>::count();
         std::vector<T> sve_numers(sve_count);
+        if (limits::is_signed) {
+            // Exercise sign adjustment with extrema and mixed-sign lanes at every vector length.
+            const T sign_cases[] = {min, max, T(min + 1), T(max - 1), T(-3), T(3), T(-2), T(2),
+                T(-1), T(1), T(0), T(0)};
+            const size_t sign_count = sizeof(sign_cases) / sizeof(sign_cases[0]);
+            for (size_t offset = 0; offset < sign_count; offset += sve_count) {
+                for (size_t lane = 0; lane < sve_count; ++lane) {
+                    sve_numers[lane] = sign_cases[(offset + lane) % sign_count];
+                }
+                test_vec_sve(sve_numers.data(), denom, the_divider);
+            }
+        }
         for (size_t i = 0; i < 10000; ++i) {
             for (size_t j = 0; j < sve_count; j++) {
                 sve_numers[j] = get_random();

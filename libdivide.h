@@ -2306,7 +2306,7 @@ svint16_t libdivide_s16_do_sve(svint16_t numers, const struct libdivide_s16_t *d
 
         // flip sign if divisor was negative
         svint16_t sign = svdup_n_s16((int8_t)more >> 7);
-        return svsub_s16_x(pg, sveor_s16_x(pg, q, sign), sign);
+        return svneg_s16_m(q, svcmplt_n_s16(pg, sign, 0), q);
     }
 
     // magic multiply-high path
@@ -2314,7 +2314,7 @@ svint16_t libdivide_s16_do_sve(svint16_t numers, const struct libdivide_s16_t *d
     if (more & LIBDIVIDE_ADD_MARKER) {
         // add numers back, adjusted for divisor sign
         svint16_t sign = svdup_n_s16((int8_t)more >> 7);
-        q = svadd_s16_x(pg, q, svsub_s16_x(pg, sveor_s16_x(pg, numers, sign), sign));
+        q = svadd_s16_x(pg, q, svneg_s16_m(numers, svcmplt_n_s16(pg, sign, 0), numers));
     }
     q = libdivide_s16_sve_sra(q, more & LIBDIVIDE_16_SHIFT_MASK);
     // round toward zero
@@ -2337,7 +2337,7 @@ svint16_t libdivide_s16_branchfree_do_sve(
     // negative q needs a bias before arithmetic shift
     q = svadd_s16_m(svcmplt_n_s16(pg, q, 0), q, mask_vec);
     q = libdivide_s16_sve_sra(q, shift);
-    return svsub_s16_x(pg, sveor_s16_x(pg, q, sign), sign);
+    return svneg_s16_m(q, svcmplt_n_s16(pg, sign, 0), q);
 }
 
 ////////// SINT32
@@ -2358,7 +2358,7 @@ svint32_t libdivide_s32_do_sve(svint32_t numers, const struct libdivide_s32_t *d
 
         // flip sign if divisor was negative
         svint32_t sign = svdup_n_s32((int8_t)more >> 7);
-        return svsub_s32_x(pg, sveor_s32_x(pg, q, sign), sign);
+        return svneg_s32_m(q, svcmplt_n_s32(pg, sign, 0), q);
     }
 
     // magic multiply-high path
@@ -2366,7 +2366,7 @@ svint32_t libdivide_s32_do_sve(svint32_t numers, const struct libdivide_s32_t *d
     if (more & LIBDIVIDE_ADD_MARKER) {
         // add numers back, adjusted for divisor sign
         svint32_t sign = svdup_n_s32((int8_t)more >> 7);
-        q = svadd_s32_x(pg, q, svsub_s32_x(pg, sveor_s32_x(pg, numers, sign), sign));
+        q = svadd_s32_x(pg, q, svneg_s32_m(numers, svcmplt_n_s32(pg, sign, 0), numers));
     }
     q = libdivide_s32_sve_sra(q, more & LIBDIVIDE_32_SHIFT_MASK);
     // round toward zero
@@ -2389,7 +2389,7 @@ svint32_t libdivide_s32_branchfree_do_sve(
     // negative q needs a bias before arithmetic shift
     q = svadd_s32_m(svcmplt_n_s32(pg, q, 0), q, mask_vec);
     q = libdivide_s32_sve_sra(q, shift);
-    return svsub_s32_x(pg, sveor_s32_x(pg, q, sign), sign);
+    return svneg_s32_m(q, svcmplt_n_s32(pg, sign, 0), q);
 }
 
 ////////// SINT64
@@ -2411,7 +2411,7 @@ svint64_t libdivide_s64_do_sve(svint64_t numers, const struct libdivide_s64_t *d
 
         // flip sign if divisor was negative
         svint64_t sign = svdup_n_s64((int8_t)more >> 7);
-        return svsub_s64_x(pg, sveor_s64_x(pg, q, sign), sign);
+        return svneg_s64_m(q, svcmplt_n_s64(pg, sign, 0), q);
     }
 
     // magic multiply-high path
@@ -2419,7 +2419,7 @@ svint64_t libdivide_s64_do_sve(svint64_t numers, const struct libdivide_s64_t *d
     if (more & LIBDIVIDE_ADD_MARKER) {
         // add numers back, adjusted for divisor sign
         svint64_t sign = svdup_n_s64((int8_t)more >> 7);
-        q = svadd_s64_x(pg, q, svsub_s64_x(pg, sveor_s64_x(pg, numers, sign), sign));
+        q = svadd_s64_x(pg, q, svneg_s64_m(numers, svcmplt_n_s64(pg, sign, 0), numers));
     }
     q = libdivide_s64_sve_sra(q, more & LIBDIVIDE_64_SHIFT_MASK);
     // round toward zero
@@ -2441,7 +2441,7 @@ svint64_t libdivide_s64_branchfree_do_sve(
     // negative q needs a bias before arithmetic shift
     q = svadd_s64_m(svcmplt_n_s64(pg, q, 0), q, mask);
     q = libdivide_s64_sve_sra(q, shift);
-    return svsub_s64_x(pg, sveor_s64_x(pg, q, sign), sign);
+    return svneg_s64_m(q, svcmplt_n_s64(pg, sign, 0), q);
 }
 
 #endif
