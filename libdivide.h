@@ -2756,11 +2756,14 @@ static LIBDIVIDE_INLINE __m256i libdivide_s64_signbits_vec256(__m256i v) {
     return signBits;
 }
 
+// The 64-bit shifts by a run-time count use the per-lane form (vpsrlvq) with the count
+// broadcast, instead of the form that takes the count in an xmm register. Measured faster
+// on Intel performance cores when the divider is loop-invariant.
 // Implementation of _mm256_srai_epi64 (from AVX512).
 static LIBDIVIDE_INLINE __m256i libdivide_s64_shift_right_vec256(__m256i v, int amt) {
     const int b = 64 - amt;
     __m256i m = _mm256_set1_epi64x((uint64_t)1 << (b - 1));
-    __m256i x = _mm256_srli_epi64(v, amt);
+    __m256i x = _mm256_srlv_epi64(v, _mm256_set1_epi64x(amt));
     __m256i result = _mm256_sub_epi64(_mm256_xor_si256(x, m), m);
     return result;
 }
@@ -2772,7 +2775,7 @@ static LIBDIVIDE_INLINE __m256i libdivide_s64_shift_right_negate_vec256(
     __m256i v, int amt, int sign) {
     const int b = 64 - amt;
     __m256i m = _mm256_set1_epi64x((int64_t)(((uint64_t)1 << (b - 1)) ^ (uint64_t)(int64_t)sign));
-    __m256i x = _mm256_srli_epi64(v, amt);
+    __m256i x = _mm256_srlv_epi64(v, _mm256_set1_epi64x(amt));
     __m256i result = _mm256_sub_epi64(_mm256_xor_si256(x, m), m);
     return result;
 }
@@ -2886,7 +2889,7 @@ __m256i libdivide_u32_branchfree_do_vec256(
 __m256i libdivide_u64_do_vec256(__m256i numers, const struct libdivide_u64_t *denom) {
     uint8_t more = denom->more;
     if (!denom->magic) {
-        return _mm256_srli_epi64(numers, more);
+        return _mm256_srlv_epi64(numers, _mm256_set1_epi64x(more));
     } else {
         __m256i q = libdivide_mullhi_u64_vec256(numers, _mm256_set1_epi64x(denom->magic));
         if (more & LIBDIVIDE_ADD_MARKER) {
@@ -2894,9 +2897,9 @@ __m256i libdivide_u64_do_vec256(__m256i numers, const struct libdivide_u64_t *de
             // return t >> denom->shift;
             uint32_t shift = more & LIBDIVIDE_64_SHIFT_MASK;
             __m256i t = _mm256_add_epi64(_mm256_srli_epi64(_mm256_sub_epi64(numers, q), 1), q);
-            return _mm256_srli_epi64(t, shift);
+            return _mm256_srlv_epi64(t, _mm256_set1_epi64x(shift));
         } else {
-            return _mm256_srli_epi64(q, more);
+            return _mm256_srlv_epi64(q, _mm256_set1_epi64x(more));
         }
     }
 }
@@ -2905,7 +2908,7 @@ __m256i libdivide_u64_branchfree_do_vec256(
     __m256i numers, const struct libdivide_u64_branchfree_t *denom) {
     __m256i q = libdivide_mullhi_u64_vec256(numers, _mm256_set1_epi64x(denom->magic));
     __m256i t = _mm256_add_epi64(_mm256_srli_epi64(_mm256_sub_epi64(numers, q), 1), q);
-    return _mm256_srli_epi64(t, denom->more);
+    return _mm256_srlv_epi64(t, _mm256_set1_epi64x(denom->more));
 }
 
 ////////// SINT16
